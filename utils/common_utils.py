@@ -1,15 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import datetime
-from sklearn.preprocessing import StandardScaler
+import lightgbm as lgb
 from sklearn.metrics import mean_squared_error
 import optuna
-import time
 import math
-import glob
-import warnings
 import seaborn as sns
 sns.set()
 

@@ -20,30 +20,30 @@ def get_test(test_y, start_time, dataset, get_data, news_data):
 
 
 def make_exp_dataset(x,f):
-    mf_x_all, y = f(x)
-    mf_train_x_all, mf_train_y = mf_x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
-    return mf_train_x_all, mf_train_y
+    x_all, y = f(x)
+    train_x_all, train_y = x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
+    return train_x_all, train_y
 
 
 def make_dataset(x,n,f,h):
-    mf_x_all, y = f(x)
-    mf_train_x_all, mf_train_y = mf_x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
-    mf_test_y_all = y.loc['2022-10-16 08:00:00':]
-    mf_test_y = mf_test_y_all.at_time(h)
+    x_all, y = f(x)
+    train_x_all, train_y = x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
+    test_y_all = y.loc['2022-10-16 08:00:00':]
+    test_y = test_y_all.at_time(h)
 
-    start_time = mf_test_y_all.at_time('08:00:00')
-    mf_test_x = get_test(mf_test_y, start_time, x, f, n)
-    return mf_train_x_all, mf_train_y, mf_test_x, mf_test_y
+    start_time = test_y_all.at_time('08:00:00')
+    test_x = get_test(test_y, start_time, x, f, n)
+    return train_x_all, train_y, test_x, test_y
 
 
-def make_no_future_dataset(x,n,f,h):
-    mf_x_all, y = f(x)
-    mf_train_x_all, mf_train_y = mf_x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
-    mf_test_y_all = y.loc['2022-10-16 08:00:00':]
+def make_no_future_dataset(x,f,h):
+    x_all, y = f(x)
+    train_x_all, train_y = x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
+    test_y_all = y.loc['2022-10-16 08:00:00':]
 
-    mf_test_y = mf_test_y_all.at_time(h)
-    mf_test_x = mf_x_all.loc[mf_test_y.index.values]
-    return mf_train_x_all, mf_train_y, mf_test_x, mf_test_y
+    test_y = test_y_all.at_time(h)
+    test_x = x_all.loc[test_y.index.values]
+    return train_x_all, train_y, test_x, test_y
 
 
 def get_data_mtfuji_2h(dataset):
