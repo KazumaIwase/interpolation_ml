@@ -14,23 +14,6 @@ import seaborn as sns
 sns.set()
 
 
-def get_test(test_y, start_time, dataset, get_data, news_data):
-    """Returns test dataset from observation data and forecast data."""
-    for i in range(len(test_y)):
-        dataset_box = dataset.copy().loc['2022-09-01 09:00:00':]
-        start = start_time.index.values[i]
-        end = test_y.index.values[i]
-
-        dataset_box.loc[start:end,:] = news_data.loc[start:end:] # changes only from the present time to the predicting time
-        test_x_all, _ = get_data(dataset_box)
-
-        if i ==0:
-            test_data = test_x_all.loc[end]
-        else:
-            test_data = pd.concat([test_data, test_x_all.loc[end]], axis=1)
-    return test_data.T
-
-
 def time_split(train_x, train_y):
     """Returns training and validation dataset that are splited into three parts in chronological order."""
     start = 365*24
