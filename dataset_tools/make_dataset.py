@@ -19,7 +19,7 @@ def get_test(test_y, start_time, dataset, get_data, news_data):
     return test_data.T
 
 
-def make_exp_dataset(f):
+def make_exp_dataset(x,f):
     mf_x_all, y = f(x)
     mf_train_x_all, mf_train_y = mf_x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
     return mf_train_x_all, mf_train_y
