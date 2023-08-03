@@ -1,6 +1,6 @@
 # Interpolation-of-mountain-weather-forecasts-
 
-## Dummy data(data/dummy_nesw.csv, data/dummy_tenki_to_kurasu.csv)
+## Dummy data
 There are csv files(data/dummy_nesw.csv, data/dummy_tenki_to_kurasu.csv) in the data folder, but they are dummy data.
 Note that they are not the data used in this research.
 Dummy data was created by us to mimic the actual data.

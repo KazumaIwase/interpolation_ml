@@ -97,7 +97,7 @@ class Runner:
         """Perform manual parameter tuning"""
         self.best_params = params
         self.score = get_scores(self.Model, self.tr_split, self.va_split, fixed_params, params)
-        print(f'params {self.best_params}\score {round(self.score, round_num)}')
+        print(f'params {self.best_params}\nscore {round(self.score, round_num)}')
 
     def run_val(self, fixed_params, p, h):
         """See the validation results"""
