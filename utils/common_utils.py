@@ -11,7 +11,7 @@ sns.set()
 
 
 def time_split(train_x, train_y):
-    """Returns training and validation dataset that are splited into three parts in chronological order."""
+    """Returns training and validation dataset that are splited into three parts in chronological order"""
     start = 365*24
     stop = 1
     num = 4
@@ -122,6 +122,8 @@ def create_custom_loss(a=16.0, alpha=0.85):
 
 
 class Runner:
+    """Provide various functions such as parameter tuning and training"""
+
     def __init__(self, Model, train_x, train_y):
         self.tr_split, self.va_split = time_split(train_x, train_y)
         self.best_params = None
@@ -132,6 +134,7 @@ class Runner:
         self.best_score = None
 
     def run_opt(self, bayes_objective, fixed_params, n_trials=10, seed=42, round_num=3, show_history=True):
+        """Perform parameter tuning with optuna"""
         study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=seed))
         if ('objective' in fixed_params.keys()) and (fixed_params['objective'] != 'regerssion'):
             history = {'val_loss':[], 'rmse':[]}
@@ -158,6 +161,7 @@ class Runner:
             print(f'best params {self.best_params}\nbest score {round(self.best_score, round_num)}')
 
     def run_val(self, fixed_params, p, h, savefig=False):
+        """See the validation results"""
         for i in range(len(self.tr_split)):
             model = self.Model(fixed_params, self.best_params)
             model.fit(self.tr_split[i], self.va_split[i])
@@ -170,6 +174,7 @@ class Runner:
             plot_valid(self.va_split[i][1], va_pred, p=p, h=h, savefig=savefig)
 
     def run_importanace(self, title='Feature importance', figsize=(6,15), top=70):
+        """Compute important features"""
         fi = self.run_model.feature_importance(importance_type='split')
         idx = np.argsort(fi)[::-1]
         self.top_cols, top_importances = self.train_x.columns.values[idx][:top], fi[idx][:top]
@@ -181,6 +186,7 @@ class Runner:
         plt.show()
 
     def run_train_all(self, fixed_params, eval_metric='rmse'):
+        """Training on all training data"""
         if 'n_estimators' in fixed_params:
             fixed_params['n_estimators'] = self.run_model.best_iteration
         elif 'nb_epoch' in fixed_params:
@@ -191,6 +197,7 @@ class Runner:
 
 
 class TestRun:
+    """Provides various processing for test data"""
     def __init__(self, test_x, test_y):
         self.test_x = test_x
         self.test_y = test_y
@@ -200,6 +207,7 @@ class TestRun:
         self.df_rmse = None
 
     def runf_test(self, model, test_set, f3144, top_cols, ts_time, loc='Temperature_Fujisan', round_num=3):
+        """Compute RMSE of Mt.Fuji for the prediction, Weather News and Tenki Tokurasu"""
         self.ts_lgbm = model.predict(self.test_x[top_cols])
         self.y_news = test_set.at_time(ts_time).loc[:, loc]
         self.f31 = f3144.at_time(ts_time)['f31']
@@ -221,6 +229,7 @@ class TestRun:
                                      'Tenki(3775m)'])
 
     def runf_test_without_f3144(self, model, test_set, top_cols, ts_time, loc='Temperature_Fujisan', round_num=3):
+        """Compute RMSE of Mt.Fuji for the prediction and Weather News"""
         self.ts_lgbm = model.predict(self.test_x[top_cols])
         self.y_news = test_set.at_time(ts_time).loc[:, loc]
         score_lg = mean_squared_error(self.test_y, self.ts_lgbm , squared=False)
@@ -230,6 +239,7 @@ class TestRun:
                                      index=['RMSE'], columns=['LightGBM', 'Weathernews'])
 
     def runh_test(self, model, test_set, top_cols, ts_time, loc='Precipitation_Hakone', round_num=3):
+        """Compute RMSE of Hakone for the prediction and Weather News"""
         self.ts_lgbm = model.predict(self.test_x[top_cols])
         self.ts_lgbm_threshold = self.ts_lgbm * (self.ts_lgbm > 0.3) + 0.0 * (self.ts_lgbm <= 0.3)
         self.y_news = test_set.at_time(ts_time).loc[:, loc]
@@ -242,6 +252,7 @@ class TestRun:
                                      index=['RMSE'], columns=['LightGBM', 'LightGBM_threshold', 'Weathernews'])
 
     def plot_test(self, title, ylabel, s, figsize=(16,4), skip=20, threshold=False):
+        """Visualize the results of predictions along with forecasts and observations"""
         plt.figure(figsize=figsize)
         plt.plot(self.test_y.index, self.test_y, label = 'Target')
         if threshold:

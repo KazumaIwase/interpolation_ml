@@ -3,7 +3,7 @@ import numpy as np
 
 
 def get_test(test_y, start_time, dataset, get_data, news_data):
-    """Returns test dataset from observation data and forecast data."""
+    """Returns test dataset from observation data and forecast data"""
     for i in range(len(test_y)):
         dataset_box = dataset.copy().loc['2022-09-01 09:00:00':]
         start = start_time.index.values[i]
@@ -20,12 +20,14 @@ def get_test(test_y, start_time, dataset, get_data, news_data):
 
 
 def make_exp_dataset(x,f):
+    """Returns experiment dataset"""
     x_all, y = f(x)
     train_x_all, train_y = x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
     return train_x_all, train_y
 
 
 def make_dataset(x,n,f,h):
+    """Returns dataset"""
     x_all, y = f(x)
     train_x_all, train_y = x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
     test_y_all = y.loc['2022-10-16 08:00:00':]
@@ -37,6 +39,7 @@ def make_dataset(x,n,f,h):
 
 
 def make_no_future_dataset(x,f,h):
+    """Returns dataset that do not use future forecast data"""
     x_all, y = f(x)
     train_x_all, train_y = x_all.loc[:'2022-10-16 07:00:00'], y.loc[:'2022-10-16 07:00:00']
     test_y_all = y.loc['2022-10-16 08:00:00':]
