@@ -4,15 +4,19 @@
 
 Kazuma Iwase and Tomoyuki Takenawa
 
-Faculty of Marine Technology, Tokyo University of Marine Science and
-Technology, 2-1-6 Etchujima, Koto-ku, Tokyo, 135-8533, Japan.
+Graduate School of Marine Science and Technology, Tokyo University of
+Marine Science and Technology, 2-1-6 Etchujima, Koto-ku, Tokyo,
+135-8533, Japan.
+
+Contributing authors: kazumaiwase676@gmail.com;
+takenawa@kaiyodai.ac.jp;
 
 <div align="left">
 
 ## About data
 
 ### Observed data
-Observation data ([observe.csv](data/observe.csv)) were downloaded from the JMA(Japan Meteorological Agency) website (https://www.data.jma.go.jp/risk/obsdl/index.php). And it is what we pre-processed.
+Observation data ([observe.csv](data/observe.csv)) is what we pre-processed from data downloaded from the JMA (Japan Meteorological Agency) website (https://www.data.jma.go.jp/risk/obsdl/index.php).
 
 ### Dummy data
 There are csv files ([dummy_nesw.csv](data/dummy_nesw.csv), [dummy_tenki_to_kurasu.csv](data/dummy_tenki_to_kurasu.csv)) in the data folder, but they are dummy data.
