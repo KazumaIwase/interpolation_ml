@@ -25,3 +25,5 @@ Dummy data was created by adding an error to the observed data so that the RMSE 
 
 ## Usage
 You can run some notebooks in [notebooks](notebooks) folder on googlecolab.
+
+training_lightgbm.ipynb: LigtGBM training for forcasting Temperature at Mt.Fuji and Precipitation at Hakone. Forecast times can be selected from 2h, 7h, 8h and 9h ahead. 
