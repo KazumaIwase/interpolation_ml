@@ -40,14 +40,18 @@ class LgbmSL:
         self.model = None
         self.best_iteration_ = None
         self.feature_importances_ = None
+        self.objective = 'regression'
 
     def fit(self, tr_split, va_split=None):
         patience = self.fixed_params['patience']
         verbose = self.fixed_params['verbose']
         n_estimators = self.fixed_params['n_estimators']
+        if 'objective' in self.fixed_params:
+           objective = self.fixed_params['objective']  
+        else: objective = self.objective     
 
-        self.model = lgb.LGBMRegressor(boosting_type='gbdt', objective='regression',
-                                       n_estimators=n_estimators, n_jobs = -1, random_state=42)
+        self.model = lgb.LGBMRegressor(boosting_type='gbdt', objective=objective,
+                                       n_estimators=n_estimators, n_jobs = 1, random_state=42)
         self.model.set_params(**self.params)
 
         if patience == False:
@@ -100,6 +104,7 @@ class Lgbm:
       			callbacks = []
 
         self.params['verbosity'] = -1
+        self.params['num_threads']=1
 
         data_train = lgb.Dataset(tr_split[0], tr_split[1])
         if va_split == None:
@@ -128,7 +133,7 @@ class Xgboost:
         verbose = self.fixed_params['verbose']
         n_estimators = self.fixed_params['n_estimators']
 
-        self.model = xgb.XGBRegressor(booster='gbtree', objective='reg:squarederror', n_jobs = -1,
+        self.model = xgb.XGBRegressor(booster='gbtree', objective='reg:squarederror', n_jobs = 1,
                                       random_state=42, n_estimators= n_estimators, learning_late = 0.1)
         self.model.set_params(**self.params)
 
@@ -153,7 +158,7 @@ class ExtraTrees:
         self.model = None
 
     def fit(self, tr_split, va_split=None):
-        self.model = ExtraTreesRegressor(random_state=42, n_jobs = -1)
+        self.model = ExtraTreesRegressor(random_state=42, n_jobs = 1)
         self.model.set_params(**self.params)
         self.model.fit(tr_split[0], tr_split[1])
 
@@ -210,7 +215,7 @@ class MLP:
             # standardization
             self.scaler = StandardScaler()
             tr_x = self.scaler.fit_transform(tr_split[0])
-            self.history = self.model.fit(tr_x, tr_split[1], workers = -1, use_multiprocessing = True,
+            self.history = self.model.fit(tr_x, tr_split[1], workers = 1, use_multiprocessing = False,
                                           epochs=nb_epoch, verbose=verbose, batch_size = batch_size)
         else:
             # standardization
@@ -221,7 +226,7 @@ class MLP:
 
             early_stopping = tf.keras.callbacks.EarlyStopping(patience=patience)
 
-            self.history = self.model.fit(tr_x, tr_split[1], workers = -1, use_multiprocessing = True,
+            self.history = self.model.fit(tr_x, tr_split[1], workers = 1, use_multiprocessing = False,
                                           epochs=nb_epoch, verbose=verbose, batch_size = batch_size,
                                           validation_data=va_split, callbacks=[early_stopping])
             self.best_iteration_ = len(self.history.history['loss'])

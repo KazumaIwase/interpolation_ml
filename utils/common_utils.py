@@ -1,3 +1,4 @@
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,6 +7,7 @@ import lightgbm as lgb
 from sklearn.metrics import mean_squared_error
 import optuna
 import math
+import time
 import seaborn as sns
 sns.set()
 
@@ -61,7 +63,7 @@ def get_scores(Model, tr_split, va_split, fixed_params, params):
         return rmse
 
 
-def plot_valid(y, pred, p, h, period=8*7*24, span=24*3, figsize=(18,6), savefig=False):
+def plot_valid(y, pred, p, h, period=8*7*24, span=24*3, figsize=(18,6)):
     """Visualize results of validation data"""
     plt.figure(figsize=figsize)
     plt.plot(y.iloc[- period:].index, y.iloc[- period:], label = 'Target')
@@ -78,9 +80,6 @@ def plot_valid(y, pred, p, h, period=8*7*24, span=24*3, figsize=(18,6), savefig=
     plt.xlabel('Time(hours)')
     plt.xticks([y.iloc[- period:].index[i] for i in np.arange(0, len(y.iloc[- period:].index), span)])
     plt.xticks(rotation=25)
-    if savefig:
-        plt.savefig(filename + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.png')
-    plt.show()
 
 
 def create_custom_loss(a=16.0, alpha=0.85):
@@ -130,10 +129,9 @@ class Runner:
         self.Model = Model
         self.train_x = train_x
         self.train_y = train_y
-        self.top_cols = None
         self.best_score = None
 
-    def run_opt(self, bayes_objective, fixed_params, n_trials=10, seed=42, round_num=3, show_history=True):
+    def run_opt(self, bayes_objective, fixed_params, n_trials=10, seed=42, round_num=3, show_history=False, figsize=(10,8), fontsize=30, linewidth=3):
         """Perform parameter tuning with optuna"""
         study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(seed=seed))
         if ('objective' in fixed_params.keys()) and (fixed_params['objective'] != 'regerssion'):
@@ -148,11 +146,15 @@ class Runner:
                 x = np.arange(len(study.trials))
 
                 sort_index = np.argsort(history['val_loss'])[::-1]
-                plt.plot(x, np.array(history['val_loss'])[sort_index], label='custom_loss')
-                plt.plot(x, np.array(history['rmse'])[sort_index], label='rmse')
-                plt.legend()
-                plt.title('Sorted validation loss')
-                plt.show()
+                plt.figure(figsize=figsize, dpi=300)
+                plt.plot(x, np.array(history['val_loss'])[sort_index], label='Binary Loss', linewidth=linewidth)
+                plt.plot(x, np.array(history['rmse'])[sort_index], label='RMSE', linewidth=linewidth)
+                plt.legend(fontsize=fontsize)
+                plt.xlabel('Number of Optuna trials',fontsize=fontsize)
+                plt.ylabel('Loss',fontsize=fontsize)
+                plt.xticks(fontsize=fontsize)
+                plt.yticks(fontsize=fontsize)
+
         else:
             objective = bayes_objective(self.Model, self.tr_split, self.va_split, fixed_params)
             study.optimize(objective, n_trials=n_trials)
@@ -162,6 +164,8 @@ class Runner:
 
     def run_val(self, fixed_params, p, h, savefig=False):
         """See the validation results"""
+        score_rmse=[]
+        score_cv=[]
         for i in range(len(self.tr_split)):
             model = self.Model(fixed_params, self.best_params)
             model.fit(self.tr_split[i], self.va_split[i])
@@ -169,30 +173,88 @@ class Runner:
             va_pred = self.run_model.predict(self.va_split[i][0])
             if ('objective' in fixed_params.keys()) and (fixed_params['objective'] != 'regerssion'):
                 custom_val = fixed_params['metric']
-                print('Custom val loss', custom_val(va_pred, self.va_split[i][1] )[1])
-            print('RMSE', ((va_pred - self.va_split[i][1])**2).mean()**0.5)
-            plot_valid(self.va_split[i][1], va_pred, p=p, h=h, savefig=savefig)
+                cv=custom_val(va_pred, self.va_split[i][1] )[1]
+                print('Custom val loss', cv)
+                score_cv.append(cv)
+            rmse=((va_pred - self.va_split[i][1])**2).mean()**0.5
+            print('RMSE', rmse)
+            score_rmse.append(rmse)
+            plot_valid(self.va_split[i][1], va_pred, p=p, h=h)
+        print('RMSE avg', np.mean(score_rmse))
+        if ('objective' in fixed_params.keys()) and (fixed_params['objective'] != 'regerssion'):
+            print('Custom val loss avg', np.mean(score_cv))
 
-    def run_importanace(self, title='Feature importance', figsize=(6,15), top=70):
+    def run_importanace(self, fixed_params, figsize=(10,8), fontsize=20, linewidth=3, nf=False):
         """Compute important features"""
         fi = self.run_model.feature_importance(importance_type='split')
         idx = np.argsort(fi)[::-1]
-        self.top_cols, top_importances = self.train_x.columns.values[idx][:top], fi[idx][:top]
+        self.cols, self.importances = self.train_x.columns.values[idx], fi[idx]
 
-        importances = pd.Series(top_importances, index=self.top_cols).sort_values(ascending=True)
-        plt.figure(figsize=figsize)
-        importances.plot.barh()
-        plt.title(title)
-        plt.show()
+        if nf:
+            rmse=[]
+            con=[]
+            if 'sin_hour' in self.train_x.columns:
+                sc = np.array(['sin_day', 'cos_day', 'sin_hour', 'cos_hour'])
+            else:
+                sc = np.array(['sin_day', 'cos_day'])
+            cols=self.cols
+            for i in sc:
+                cols=cols[cols != i]
+            for j in np.arange(10,len(self.cols),10):
+                top_cols = np.union1d(sc, cols[:j-len(sc)])
+                tr_split, va_split = time_split(self.train_x[top_cols], self.train_y)
+                rmse.append(get_scores(self.Model, tr_split, va_split, fixed_params, self.best_params))
+                con.append(j)
+
+            self.top=con[np.argmin(np.array(rmse))]
+            print(f'top{self.top}')
+            #self.top_cols, top_importances = self.cols[:self.top], self.importances[:self.top]
+
+            plt.figure(figsize=figsize, dpi=300)
+            plt.plot(con, rmse, linewidth=linewidth)
+            plt.xlabel('Number of Features',fontsize=fontsize)
+            plt.ylabel('RMSE',fontsize=fontsize)
+            plt.xticks(fontsize=fontsize)
+            plt.yticks(fontsize=fontsize)
+
+    def get_cols(self, top=70):
+        """Return the important features"""
+
+        if 'sin_hour' in self.train_x.columns:
+            sc = np.array(['sin_day', 'cos_day', 'sin_hour', 'cos_hour'])
+        else:
+            sc = np.array(['sin_day', 'cos_day'])
+
+        if top > len(self.cols):
+            top = len(self.cols)
+
+        cols=self.cols
+        for i in sc:
+            cols=cols[cols != i]
+        top_cols = np.union1d(sc, cols[:top-len(sc)])
+        return top_cols
+
+    def plot_importanace(self, figsize=(10,8), top=10, fontsize=20):
+        top_cols, top_importances = self.cols[:top], self.importances[:top]
+
+        importances = pd.Series(top_importances, index=top_cols).sort_values(ascending=True)
+        plt.figure(figsize=figsize, dpi=300)
+        importances.plot.barh(fontsize=fontsize)
 
     def run_train_all(self, fixed_params, eval_metric='rmse'):
         """Training on all training data"""
         if 'n_estimators' in fixed_params:
             fixed_params['n_estimators'] = self.run_model.best_iteration
+            print('best_iteration', self.run_model.best_iteration)
         elif 'nb_epoch' in fixed_params:
             fixed_params['nb_epoch'] = self.run_model.best_iteration
+            print('best_iteration', self.run_model.best_iteration)
         model = self.Model(fixed_params, self.best_params)
+        t_start = time.time()
         model.fit([self.train_x, self.train_y])
+        t_end = time.time()
+        self.t_train = t_end - t_start
+        print(self.t_train)
         self.model = model.model
 
 
@@ -251,33 +313,27 @@ class TestRun:
                                      'Weathernews': [round(score_news, round_num)]},
                                      index=['RMSE'], columns=['LightGBM', 'LightGBM_threshold', 'Weathernews'])
 
-    def plot_test(self, title, ylabel, s, figsize=(16,4), skip=20, threshold=False):
+    def plot_test(self, ylabel, s, title=False, figsize=(22,10), fontsize=10, linewidth=3, skip=20, threshold=False):
         """Visualize the results of predictions along with forecasts and observations"""
-        plt.figure(figsize=figsize)
-        plt.plot(self.test_y.index, self.test_y, label = 'Target')
+        plt.figure(figsize=figsize, dpi=300)
+        plt.plot(self.test_y.index, self.test_y, label = 'Observation', linewidth=linewidth)
         if threshold:
-            plt.plot(self.test_y.index, self.ts_lgbm_threshold , label = 'LightGBM_threshold')
+            plt.plot(self.test_y.index, self.ts_lgbm_threshold , label = 'LightGBM_threshold', linewidth=linewidth)
         else:
-            plt.plot(self.test_y.index, self.ts_lgbm , label = 'LightGBM')
+            plt.plot(self.test_y.index, self.ts_lgbm , label = 'LightGBM', linewidth=linewidth)
         if s == 'w':
-            plt.plot(self.test_y.index, self.y_news, label = 'Weathernews')
+            plt.plot(self.test_y.index, self.y_news, label = 'Weathernews', linewidth=linewidth)
         elif s == '3':
-            plt.plot(self.test_y.index, self.f31, label = 'Tenki(3100m)')
+            plt.plot(self.test_y.index, self.f31, label = 'Tenki(3100m)', linewidth=linewidth)
         elif s == '4':
-            plt.plot(self.test_y.index, self.f44, label = 'Tenki(4400m)')
+            plt.plot(self.test_y.index, self.f44, label = 'Tenki(4400m)', linewidth=linewidth)
         elif s == '34':
             plt.plot(self.test_y.index,
                 (4400-3775)/(4400-3100) * self.f31 + (3775-3100)/(4400-3100) * self.f44,
-                label = 'Tenki(3775m)')
-        plt.legend()
+                label = 'Tenki(3775m)', linewidth=linewidth)
+        plt.legend(fontsize=fontsize)
         if title is not False:
             plt.title(title)
-        # plt.xlabel('Time(hours)')
-        plt.ylabel(ylabel)
-        plt.xticks([self.test_y.index[i] for i in np.arange(0, len(self.test_y.index), skip)])
-        plt.xticks(rotation=25)
-        if title is not False:
-            plt.savefig(title + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.png')
-        else:
-            plt.savefig(ylabel + datetime.datetime.now().strftime('%Y%m%d_%H%M%S') + '.png')
-        plt.show()
+        plt.ylabel(ylabel,fontsize=fontsize)
+        plt.xticks([self.test_y.index[i] for i in np.arange(0, len(self.test_y.index), skip)],fontsize=fontsize,rotation=25)
+        plt.yticks(fontsize=fontsize)

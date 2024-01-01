@@ -144,15 +144,16 @@ class Runner:
 
     def run_train_all(self, fixed_params):
         """Training on all training data"""
-        t_start = time.time()
 
         if 'n_estimators' in fixed_params:
             fixed_params['n_estimators'] = self.run_model.best_iteration_
+            print('best_iteration', self.run_model.best_iteration_)
         elif 'nb_epoch' in fixed_params:
             fixed_params['nb_epoch'] = self.run_model.best_iteration_
+            print('best_iteration', self.run_model.best_iteration_)
         self.model = self.Model(fixed_params, self.best_params)
+        t_start = time.time()
         self.model.fit((self.train_x, self.train_y))
-
         t_end = time.time()
         self.t_train = t_end - t_start 
 
