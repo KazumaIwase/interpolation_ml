@@ -84,11 +84,11 @@ def plot_valid(y, pred, p, h, period=8*7*24, span=24*3, figsize=(18,6)):
 
 def create_custom_loss(a=16.0, alpha=0.85):
     def custom_loss(y_pred, y_true):
-        # compute the RMSE loss
+        # compute the MSE loss
         if isinstance(y_true, lgb.basic.Dataset):
             y_true = y_true.get_label()
-        rmse_grad = y_pred - y_true
-        rmse_hess = np.ones_like(y_pred)
+        mse_grad = y_pred - y_true
+        mse_hess = np.ones_like(y_pred)
 
         # compute the new binary entropy loss
         y_true_class = np.where(y_true > 0, 1, 0)
@@ -98,26 +98,27 @@ def create_custom_loss(a=16.0, alpha=0.85):
 
         # compute the combined gradient and Hessian
         beta = 1.0 - alpha # weight of LogLoss
-        grad = alpha * rmse_grad + beta * logloss_grad
-        hess = alpha * rmse_hess + beta * logloss_hess
+        grad = alpha * mse_grad + beta * logloss_grad
+        hess = alpha * mse_hess + beta * logloss_hess
         return grad, hess
 
     def custom_val(y_pred, y_true):
-        # compute the RMSE loss
+        # compute the MSE loss
         if isinstance(y_true, lgb.basic.Dataset):
             y_true = y_true.get_label()
-        rmse = np.mean((y_pred - y_true)**2)**0.5
+        mse2 = np.mean((y_pred - y_true)**2)/2
 
         # compute the new binary entropy loss
         y_true_class = np.where(y_true > 0, 1, 0)
         y_sigmoid =  1 / (1 + np.exp(- a * (y_pred - 0.25)))
         logloss = np.mean( - y_true_class * np.log(y_sigmoid + 1e-10) - (1 - y_true_class) * np.log(1-y_sigmoid + 1e-10))
 
-        # compute the combined gradient and Hessian
+        # compute the root of combined loss
         beta = 1.0 - alpha # weight of LogLoss
-        custom_val = alpha * rmse + beta * logloss
+        custom_val = alpha * mse2 + beta * logloss
         return 'custom_val', custom_val, False
     return custom_loss, custom_val
+
 
 
 class Runner:
